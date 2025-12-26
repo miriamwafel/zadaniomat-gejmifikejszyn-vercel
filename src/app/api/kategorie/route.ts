@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, kategorie } from "@/db";
 import { eq } from "drizzle-orm";
+import { auth } from "@/lib/auth";
 
 // Domyślne kategorie
 const DEFAULT_KATEGORIE = [
-  { klucz: "zapianowany", nazwa: "Zapianowany", typ: "wszystkie" },
-  { klucz: "klejpan", nazwa: "Klejpan", typ: "wszystkie" },
-  { klucz: "marka_langer", nazwa: "Marka Langer", typ: "wszystkie" },
-  { klucz: "marketing_construction", nazwa: "Marketing Construction", typ: "wszystkie" },
-  { klucz: "fjo", nazwa: "FJO (Firma Jako Osobowość)", typ: "wszystkie" },
-  { klucz: "obsluga_telefoniczna", nazwa: "Obsługa telefoniczna", typ: "wszystkie" },
-  { klucz: "sprawy_organizacyjne", nazwa: "Sprawy Organizacyjne", typ: "zadania" },
+  { klucz: "zapianowany", nazwa: "Zapianowany", typ: "wszystkie", isStrategic: true, color: "#6366f1" },
+  { klucz: "klejpan", nazwa: "Klejpan", typ: "wszystkie", isStrategic: true, color: "#22c55e" },
+  { klucz: "marka_langer", nazwa: "Marka Langer", typ: "wszystkie", isStrategic: true, color: "#f59e0b" },
+  { klucz: "marketing_construction", nazwa: "Marketing Construction", typ: "wszystkie", isStrategic: false, color: "#ec4899" },
+  { klucz: "fjo", nazwa: "FJO (Firma Jako Osobowość)", typ: "wszystkie", isStrategic: false, color: "#8b5cf6" },
+  { klucz: "obsluga_telefoniczna", nazwa: "Obsługa telefoniczna", typ: "wszystkie", isStrategic: false, color: "#14b8a6" },
+  { klucz: "sprawy_organizacyjne", nazwa: "Sprawy Organizacyjne", typ: "zadania", isStrategic: false, color: "#64748b" },
 ];
 
 // GET - pobierz kategorie
@@ -18,12 +19,25 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const typ = searchParams.get("typ"); // 'cele', 'zadania', 'wszystkie'
+    const strategic = searchParams.get("strategic"); // 'true' to filter only strategic
 
     let result = await db.select().from(kategorie).where(eq(kategorie.aktywne, true));
 
     // Jeśli brak kategorii, zwróć domyślne
     if (result.length === 0) {
-      return NextResponse.json(DEFAULT_KATEGORIE);
+      let defaultKats = DEFAULT_KATEGORIE;
+      if (strategic === "true") {
+        defaultKats = defaultKats.filter(k => k.isStrategic);
+      }
+      if (typ && typ !== "wszystkie") {
+        defaultKats = defaultKats.filter(k => k.typ === typ || k.typ === "wszystkie");
+      }
+      return NextResponse.json(defaultKats);
+    }
+
+    // Filtruj po strategic
+    if (strategic === "true") {
+      result = result.filter(k => k.isStrategic === true);
     }
 
     // Filtruj po typie
@@ -39,15 +53,22 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - utwórz kategorię
+// POST - utwórz kategorię (tylko admin)
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.role || !["admin", "super_admin"].includes(session.user.role)) {
+      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+    }
+
     const body = await request.json();
 
     const result = await db.insert(kategorie).values({
       klucz: body.klucz,
       nazwa: body.nazwa,
       typ: body.typ || "wszystkie",
+      isStrategic: body.is_strategic || false,
+      color: body.color || "#6366f1",
       aktywne: true,
     }).returning();
 
@@ -58,9 +79,14 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT - zaktualizuj kategorię
+// PUT - zaktualizuj kategorię (tylko admin)
 export async function PUT(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.role || !["admin", "super_admin"].includes(session.user.role)) {
+      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+    }
+
     const body = await request.json();
 
     if (!body.id) {
@@ -71,6 +97,8 @@ export async function PUT(request: NextRequest) {
     if (body.klucz !== undefined) updateData.klucz = body.klucz;
     if (body.nazwa !== undefined) updateData.nazwa = body.nazwa;
     if (body.typ !== undefined) updateData.typ = body.typ;
+    if (body.is_strategic !== undefined) updateData.isStrategic = body.is_strategic;
+    if (body.color !== undefined) updateData.color = body.color;
     if (body.aktywne !== undefined) updateData.aktywne = body.aktywne;
 
     const result = await db.update(kategorie)
@@ -85,9 +113,14 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE - usuń kategorię (soft delete)
+// DELETE - usuń kategorię (soft delete, tylko admin)
 export async function DELETE(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.role || !["admin", "super_admin"].includes(session.user.role)) {
+      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const id = searchParams.get("id");
 
@@ -103,19 +136,5 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error("Error deleting kategoria:", error);
     return NextResponse.json({ error: "Failed to delete kategoria" }, { status: 500 });
-  }
-}
-
-// Inicjalizacja domyślnych kategorii
-export async function initDefaultKategorie() {
-  try {
-    const existing = await db.select().from(kategorie);
-    if (existing.length === 0) {
-      for (const kat of DEFAULT_KATEGORIE) {
-        await db.insert(kategorie).values(kat);
-      }
-    }
-  } catch (error) {
-    console.error("Error initializing kategorie:", error);
   }
 }

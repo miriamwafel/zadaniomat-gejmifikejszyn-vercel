@@ -8,18 +8,19 @@ export default function SetupPage() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
 
-  const initDb = async () => {
+  const initDb = async (force: boolean = false) => {
     setStatus("loading");
     try {
-      const res = await fetch("/api/init-db", { method: "POST" });
+      const url = force ? "/api/init-db?force=true" : "/api/init-db";
+      const res = await fetch(url, { method: "POST" });
       const data = await res.json();
 
       if (res.ok) {
         setStatus("success");
-        setMessage("Baza danych zainicjalizowana pomyślnie!");
+        setMessage(data.message || "Baza danych zainicjalizowana pomyślnie!");
       } else {
         setStatus("error");
-        setMessage(data.error || "Wystąpił błąd");
+        setMessage(data.details || data.error || "Wystąpił błąd");
       }
     } catch {
       setStatus("error");
@@ -36,14 +37,25 @@ export default function SetupPage() {
         {status === "idle" && (
           <>
             <p className="text-gray-500 mb-6">
-              Kliknij poniżej aby utworzyć wszystkie wymagane tabele w bazie danych.
+              Wybierz opcję inicjalizacji bazy danych:
             </p>
-            <button
-              onClick={initDb}
-              className="w-full bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700 transition-colors"
-            >
-              Zainicjalizuj bazę danych
-            </button>
+            <div className="space-y-3">
+              <button
+                onClick={() => initDb(false)}
+                className="w-full bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700 transition-colors"
+              >
+                Zainicjalizuj (zachowaj dane)
+              </button>
+              <button
+                onClick={() => initDb(true)}
+                className="w-full bg-red-600 text-white py-3 rounded-lg font-medium hover:bg-red-700 transition-colors"
+              >
+                Resetuj bazę (usuń wszystko)
+              </button>
+            </div>
+            <p className="text-xs text-amber-600 mt-4">
+              Opcja &quot;Resetuj bazę&quot; usunie wszystkie dane i użytkowników!
+            </p>
           </>
         )}
 
@@ -71,12 +83,20 @@ export default function SetupPage() {
           <div className="py-4">
             <div className="text-red-500 text-5xl mb-4">✗</div>
             <p className="text-red-600 mb-6">{message}</p>
-            <button
-              onClick={initDb}
-              className="w-full bg-gray-600 text-white py-3 rounded-lg font-medium hover:bg-gray-700 transition-colors"
-            >
-              Spróbuj ponownie
-            </button>
+            <div className="space-y-3">
+              <button
+                onClick={() => initDb(false)}
+                className="w-full bg-gray-600 text-white py-3 rounded-lg font-medium hover:bg-gray-700 transition-colors"
+              >
+                Spróbuj ponownie
+              </button>
+              <button
+                onClick={() => initDb(true)}
+                className="w-full bg-red-600 text-white py-3 rounded-lg font-medium hover:bg-red-700 transition-colors"
+              >
+                Resetuj i zainicjalizuj od nowa
+              </button>
+            </div>
           </div>
         )}
 

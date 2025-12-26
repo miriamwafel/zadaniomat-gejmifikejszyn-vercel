@@ -245,6 +245,8 @@ export const kategorie = pgTable("kategorie", {
   klucz: varchar("klucz", { length: 50 }).notNull().unique(),
   nazwa: varchar("nazwa", { length: 100 }).notNull(),
   typ: varchar("typ", { length: 20 }).notNull().default("wszystkie"), // 'cele', 'zadania', 'wszystkie'
+  isStrategic: boolean("is_strategic").default(false),
+  color: varchar("color", { length: 20 }).default("#6366f1"),
   aktywne: boolean("aktywne").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });

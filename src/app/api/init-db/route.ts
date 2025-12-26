@@ -1,9 +1,34 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@vercel/postgres";
 
 // POST - inicjalizuj tabele bazy danych
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    const searchParams = request.nextUrl.searchParams;
+    const force = searchParams.get("force") === "true";
+
+    if (force) {
+      // Usuń wszystkie tabele w odpowiedniej kolejności (najpierw zależne)
+      await sql`DROP TABLE IF EXISTS stale_overrides CASCADE`;
+      await sql`DROP TABLE IF EXISTS godziny_okres CASCADE`;
+      await sql`DROP TABLE IF EXISTS combo_state CASCADE`;
+      await sql`DROP TABLE IF EXISTS daily_challenges CASCADE`;
+      await sql`DROP TABLE IF EXISTS achievements CASCADE`;
+      await sql`DROP TABLE IF EXISTS xp_log CASCADE`;
+      await sql`DROP TABLE IF EXISTS streaks CASCADE`;
+      await sql`DROP TABLE IF EXISTS gamification_stats CASCADE`;
+      await sql`DROP TABLE IF EXISTS abstract_goals CASCADE`;
+      await sql`DROP TABLE IF EXISTS dni_wolne CASCADE`;
+      await sql`DROP TABLE IF EXISTS stale_zadania CASCADE`;
+      await sql`DROP TABLE IF EXISTS zadania CASCADE`;
+      await sql`DROP TABLE IF EXISTS cele_okres CASCADE`;
+      await sql`DROP TABLE IF EXISTS okresy CASCADE`;
+      await sql`DROP TABLE IF EXISTS cele_rok CASCADE`;
+      await sql`DROP TABLE IF EXISTS roki CASCADE`;
+      await sql`DROP TABLE IF EXISTS kategorie CASCADE`;
+      await sql`DROP TABLE IF EXISTS users CASCADE`;
+    }
+
     // Tworzenie tabel
 
     // Tabela użytkowników (musi być pierwsza)
@@ -17,6 +42,20 @@ export async function POST() {
         active BOOLEAN NOT NULL DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
+    // Kategorie (muszą być przed roki/zadania)
+    await sql`
+      CREATE TABLE IF NOT EXISTS kategorie (
+        id SERIAL PRIMARY KEY,
+        klucz VARCHAR(50) NOT NULL UNIQUE,
+        nazwa VARCHAR(100) NOT NULL,
+        typ VARCHAR(20) NOT NULL DEFAULT 'wszystkie',
+        is_strategic BOOLEAN DEFAULT false,
+        color VARCHAR(20) DEFAULT '#6366f1',
+        aktywne BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
 
@@ -215,17 +254,6 @@ export async function POST() {
     `;
 
     await sql`
-      CREATE TABLE IF NOT EXISTS kategorie (
-        id SERIAL PRIMARY KEY,
-        klucz VARCHAR(50) NOT NULL UNIQUE,
-        nazwa VARCHAR(100) NOT NULL,
-        typ VARCHAR(20) NOT NULL DEFAULT 'wszystkie',
-        aktywne BOOLEAN DEFAULT true,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-
-    await sql`
       CREATE TABLE IF NOT EXISTS godziny_okres (
         id SERIAL PRIMARY KEY,
         okres_id INTEGER NOT NULL REFERENCES okresy(id) ON DELETE CASCADE,
@@ -247,22 +275,35 @@ export async function POST() {
       )
     `;
 
+    // Migracje - dodaj brakujące kolumny do istniejących tabel
+    try {
+      await sql`ALTER TABLE kategorie ADD COLUMN IF NOT EXISTS is_strategic BOOLEAN DEFAULT false`;
+    } catch { /* kolumna może już istnieć */ }
+
+    try {
+      await sql`ALTER TABLE kategorie ADD COLUMN IF NOT EXISTS color VARCHAR(20) DEFAULT '#6366f1'`;
+    } catch { /* kolumna może już istnieć */ }
+
     // Wstaw domyślne kategorie
     await sql`
-      INSERT INTO kategorie (klucz, nazwa, typ) VALUES
-        ('zapianowany', 'Zapianowany', 'wszystkie'),
-        ('klejpan', 'Klejpan', 'wszystkie'),
-        ('marka_langer', 'Marka Langer', 'wszystkie'),
-        ('marketing_construction', 'Marketing Construction', 'wszystkie'),
-        ('fjo', 'FJO (Firma Jako Osobowość)', 'wszystkie'),
-        ('obsluga_telefoniczna', 'Obsługa telefoniczna', 'wszystkie'),
-        ('sprawy_organizacyjne', 'Sprawy Organizacyjne', 'zadania')
-      ON CONFLICT (klucz) DO NOTHING
+      INSERT INTO kategorie (klucz, nazwa, typ, is_strategic, color) VALUES
+        ('zapianowany', 'Zapianowany', 'wszystkie', true, '#6366f1'),
+        ('klejpan', 'Klejpan', 'wszystkie', true, '#22c55e'),
+        ('marka_langer', 'Marka Langer', 'wszystkie', true, '#f59e0b'),
+        ('marketing_construction', 'Marketing Construction', 'wszystkie', false, '#ec4899'),
+        ('fjo', 'FJO (Firma Jako Osobowość)', 'wszystkie', false, '#8b5cf6'),
+        ('obsluga_telefoniczna', 'Obsługa telefoniczna', 'wszystkie', false, '#14b8a6'),
+        ('sprawy_organizacyjne', 'Sprawy Organizacyjne', 'zadania', false, '#64748b')
+      ON CONFLICT (klucz) DO UPDATE SET
+        is_strategic = EXCLUDED.is_strategic,
+        color = EXCLUDED.color
     `;
 
     return NextResponse.json({
       success: true,
-      message: "Database initialized successfully!"
+      message: force
+        ? "Database reset and initialized successfully!"
+        : "Database initialized successfully!"
     });
   } catch (error) {
     console.error("Error initializing database:", error);
