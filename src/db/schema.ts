@@ -13,6 +13,20 @@ import {
 } from "drizzle-orm/pg-core";
 
 // =============================================
+// USERS (użytkownicy)
+// =============================================
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  password: varchar("password", { length: 255 }).notNull(),
+  name: varchar("name", { length: 100 }),
+  role: varchar("role", { length: 20 }).notNull().default("user"), // 'user', 'admin', 'super_admin'
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// =============================================
 // ROKI (90-dniowe okresy planowania)
 // =============================================
 export const roki = pgTable("roki", {
@@ -261,6 +275,8 @@ export const staleOverrides = pgTable("stale_overrides", {
 // =============================================
 // TYPES
 // =============================================
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
 export type Rok = typeof roki.$inferSelect;
 export type NewRok = typeof roki.$inferInsert;
 export type Okres = typeof okresy.$inferSelect;

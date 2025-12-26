@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSession, signOut } from "next-auth/react";
+import Link from "next/link";
 import { TaskCard } from "@/components/TaskCard";
 import { GamificationPanel } from "@/components/GamificationPanel";
 import { AddTaskForm } from "@/components/AddTaskForm";
@@ -36,6 +38,7 @@ interface GamificationStats {
 }
 
 export default function Home() {
+  const { data: session } = useSession();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [kategorie, setKategorie] = useState<Kategoria[]>([]);
   const [gamificationStats, setGamificationStats] = useState<GamificationStats | null>(null);
@@ -44,6 +47,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [dbInitialized, setDbInitialized] = useState<boolean | null>(null);
   const [initializingDb, setInitializingDb] = useState(false);
+
+  const isAdmin = session?.user?.role === "admin" || session?.user?.role === "super_admin";
 
   // Sprawdź stan bazy danych
   const checkDb = useCallback(async () => {
@@ -236,8 +241,27 @@ export default function Home() {
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
       <header className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">Zadaniomat OKR</h1>
+          <div className="flex items-center gap-4">
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="text-sm text-purple-600 hover:text-purple-800 font-medium"
+              >
+                Panel Admina
+              </Link>
+            )}
+            <span className="text-sm text-gray-600">
+              {session?.user?.name || session?.user?.email}
+            </span>
+            <button
+              onClick={() => signOut()}
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              Wyloguj
+            </button>
+          </div>
         </div>
       </header>
 

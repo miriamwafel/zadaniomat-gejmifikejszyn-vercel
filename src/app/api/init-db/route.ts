@@ -5,6 +5,21 @@ import { sql } from "@vercel/postgres";
 export async function POST() {
   try {
     // Tworzenie tabel
+
+    // Tabela użytkowników (musi być pierwsza)
+    await sql`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        name VARCHAR(100),
+        role VARCHAR(20) NOT NULL DEFAULT 'user',
+        active BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
     await sql`
       CREATE TABLE IF NOT EXISTS roki (
         id SERIAL PRIMARY KEY,
