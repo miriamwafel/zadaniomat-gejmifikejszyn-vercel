@@ -58,6 +58,16 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error("Registration error:", error);
+    const errorMessage = error instanceof Error ? error.message : "";
+
+    // Sprawdź czy to błąd braku tabeli
+    if (errorMessage.includes("does not exist") || errorMessage.includes("relation")) {
+      return NextResponse.json(
+        { error: "Baza danych nie jest zainicjalizowana. Wróć na stronę główną i kliknij 'Zainicjalizuj bazę danych'." },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
       { error: "Wystąpił błąd podczas rejestracji" },
       { status: 500 }

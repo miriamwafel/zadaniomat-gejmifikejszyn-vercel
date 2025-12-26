@@ -61,7 +61,7 @@ export function AddTaskForm({ kategorie, selectedDate, onAdd, onCancel }: AddTas
             type="text"
             value={zadanie}
             onChange={(e) => setZadanie(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 bg-white"
             placeholder="Co chcesz zrobić?"
             autoFocus
           />
@@ -74,7 +74,7 @@ export function AddTaskForm({ kategorie, selectedDate, onAdd, onCancel }: AddTas
           <select
             value={kategoria}
             onChange={(e) => setKategoria(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 bg-white"
           >
             {kategorie.map((k) => (
               <option key={k.klucz} value={k.klucz}>
@@ -91,7 +91,7 @@ export function AddTaskForm({ kategorie, selectedDate, onAdd, onCancel }: AddTas
           <textarea
             value={celTodo}
             onChange={(e) => setCelTodo(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 bg-white"
             rows={2}
             placeholder="Dodatkowe informacje..."
           />
@@ -106,7 +106,7 @@ export function AddTaskForm({ kategorie, selectedDate, onAdd, onCancel }: AddTas
               type="number"
               value={planowanyCzas}
               onChange={(e) => setPlanowanyCzas(parseInt(e.target.value) || 0)}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 bg-white"
               min={0}
               step={5}
             />
@@ -120,7 +120,7 @@ export function AddTaskForm({ kategorie, selectedDate, onAdd, onCancel }: AddTas
               type="time"
               value={godzinaStart}
               onChange={(e) => setGodzinaStart(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 bg-white"
             />
           </div>
         </div>

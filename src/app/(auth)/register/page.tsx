@@ -74,7 +74,7 @@ export default function RegisterPage() {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 bg-white"
               placeholder="Jan Kowalski"
             />
           </div>
@@ -87,7 +87,7 @@ export default function RegisterPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 bg-white"
               placeholder="twoj@email.pl"
               required
             />
@@ -101,7 +101,7 @@ export default function RegisterPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 bg-white"
               placeholder="••••••••"
               required
               minLength={6}
@@ -116,7 +116,7 @@ export default function RegisterPage() {
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 bg-white"
               placeholder="••••••••"
               required
             />
@@ -141,6 +141,26 @@ export default function RegisterPage() {
         <p className="text-center text-gray-500 text-sm mt-4">
           Pierwszy zarejestrowany użytkownik automatycznie staje się super adminem.
         </p>
+
+        {error && error.includes("zainicjalizowana") && (
+          <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
+            <p className="text-sm text-yellow-800 mb-2">
+              Musisz najpierw zainicjalizować bazę danych:
+            </p>
+            <button
+              onClick={async () => {
+                const res = await fetch("/api/init-db", { method: "POST" });
+                if (res.ok) {
+                  setError("");
+                  alert("Baza zainicjalizowana! Możesz teraz się zarejestrować.");
+                }
+              }}
+              className="w-full bg-yellow-500 text-white py-2 rounded-lg font-medium hover:bg-yellow-600 transition-colors"
+            >
+              Zainicjalizuj bazę danych
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
