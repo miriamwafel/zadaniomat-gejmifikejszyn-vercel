@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, zadania } from "@/db";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
+import { auth } from "@/lib/auth";
 
 // GET - pobierz zadania (opcjonalnie filtruj po dacie)
 export async function GET(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const userId = parseInt(session.user.id);
+
     const searchParams = request.nextUrl.searchParams;
     const dzien = searchParams.get("dzien");
     const okresId = searchParams.get("okres_id");
@@ -12,8 +19,7 @@ export async function GET(request: NextRequest) {
     const dataOd = searchParams.get("data_od");
     const dataDo = searchParams.get("data_do");
 
-    let query = db.select().from(zadania);
-    const conditions = [];
+    const conditions = [eq(zadania.userId, userId)];
 
     if (dzien) {
       conditions.push(eq(zadania.dzien, dzien));
@@ -31,9 +37,9 @@ export async function GET(request: NextRequest) {
       conditions.push(lte(zadania.dzien, dataDo));
     }
 
-    const result = conditions.length > 0
-      ? await query.where(and(...conditions)).orderBy(zadania.godzinaStart, zadania.pozycjaHarmonogram)
-      : await query.orderBy(desc(zadania.dzien), zadania.godzinaStart);
+    const result = await db.select().from(zadania)
+      .where(and(...conditions))
+      .orderBy(zadania.godzinaStart, zadania.pozycjaHarmonogram, desc(zadania.dzien));
 
     return NextResponse.json(result);
   } catch (error) {
@@ -45,9 +51,16 @@ export async function GET(request: NextRequest) {
 // POST - utwórz nowe zadanie
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const userId = parseInt(session.user.id);
+
     const body = await request.json();
 
     const result = await db.insert(zadania).values({
+      userId,
       okresId: body.okres_id || null,
       kategoria: body.kategoria,
       dzien: body.dzien,
@@ -72,6 +85,12 @@ export async function POST(request: NextRequest) {
 // PUT - zaktualizuj zadanie
 export async function PUT(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const userId = parseInt(session.user.id);
+
     const body = await request.json();
 
     if (!body.id) {
@@ -90,10 +109,15 @@ export async function PUT(request: NextRequest) {
     if (body.godzina_koniec !== undefined) updateData.godzinaKoniec = body.godzina_koniec;
     if (body.pozycja_harmonogram !== undefined) updateData.pozycjaHarmonogram = body.pozycja_harmonogram;
 
+    // Tylko zadania należące do użytkownika
     const result = await db.update(zadania)
       .set(updateData)
-      .where(eq(zadania.id, body.id))
+      .where(and(eq(zadania.id, body.id), eq(zadania.userId, userId)))
       .returning();
+
+    if (result.length === 0) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    }
 
     return NextResponse.json(result[0]);
   } catch (error) {
@@ -105,6 +129,12 @@ export async function PUT(request: NextRequest) {
 // DELETE - usuń zadanie
 export async function DELETE(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const userId = parseInt(session.user.id);
+
     const searchParams = request.nextUrl.searchParams;
     const id = searchParams.get("id");
 
@@ -112,7 +142,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "ID is required" }, { status: 400 });
     }
 
-    await db.delete(zadania).where(eq(zadania.id, parseInt(id)));
+    // Tylko zadania należące do użytkownika
+    await db.delete(zadania).where(and(eq(zadania.id, parseInt(id)), eq(zadania.userId, userId)));
 
     return NextResponse.json({ success: true });
   } catch (error) {

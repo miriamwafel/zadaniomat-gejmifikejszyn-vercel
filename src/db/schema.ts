@@ -31,6 +31,7 @@ export const users = pgTable("users", {
 // =============================================
 export const roki = pgTable("roki", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
   nazwa: varchar("nazwa", { length: 100 }).notNull(),
   dataStart: date("data_start").notNull(),
   dataKoniec: date("data_koniec").notNull(),
@@ -82,6 +83,7 @@ export const celeOkres = pgTable("cele_okres", {
 // =============================================
 export const zadania = pgTable("zadania", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
   okresId: integer("okres_id").references(() => okresy.id),
   kategoria: varchar("kategoria", { length: 50 }).notNull(),
   dzien: date("dzien").notNull(),
@@ -103,6 +105,7 @@ export const zadania = pgTable("zadania", {
 // =============================================
 export const staleZadania = pgTable("stale_zadania", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
   nazwa: varchar("nazwa", { length: 255 }).notNull(),
   kategoria: varchar("kategoria", { length: 50 }).notNull(),
   celTodo: text("cel_todo"),
@@ -134,7 +137,7 @@ export const dniWolne = pgTable("dni_wolne", {
 // =============================================
 export const gamificationStats = pgTable("gamification_stats", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().default(1),
+  userId: integer("user_id").notNull().references(() => users.id),
   totalXp: integer("total_xp").notNull().default(0),
   currentLevel: integer("current_level").notNull().default(1),
   prestige: integer("prestige").notNull().default(0),
@@ -148,7 +151,7 @@ export const gamificationStats = pgTable("gamification_stats", {
 // =============================================
 export const streaks = pgTable("streaks", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().default(1),
+  userId: integer("user_id").notNull().references(() => users.id),
   streakType: varchar("streak_type", { length: 50 }).notNull(),
   currentCount: integer("current_count").notNull().default(0),
   bestCount: integer("best_count").notNull().default(0),
@@ -165,7 +168,7 @@ export const streaks = pgTable("streaks", {
 // =============================================
 export const xpLog = pgTable("xp_log", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().default(1),
+  userId: integer("user_id").notNull().references(() => users.id),
   xpAmount: integer("xp_amount").notNull(),
   xpType: varchar("xp_type", { length: 50 }).notNull(),
   multiplier: decimal("multiplier", { precision: 4, scale: 2 }).notNull().default("1.00"),
@@ -181,7 +184,7 @@ export const xpLog = pgTable("xp_log", {
 // =============================================
 export const achievements = pgTable("achievements", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().default(1),
+  userId: integer("user_id").notNull().references(() => users.id),
   achievementKey: varchar("achievement_key", { length: 50 }).notNull(),
   earnedAt: timestamp("earned_at").defaultNow(),
   notified: boolean("notified").notNull().default(false),
@@ -194,7 +197,7 @@ export const achievements = pgTable("achievements", {
 // =============================================
 export const dailyChallenges = pgTable("daily_challenges", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().default(1),
+  userId: integer("user_id").notNull().references(() => users.id),
   challengeDate: date("challenge_date").notNull(),
   challengeKey: varchar("challenge_key", { length: 50 }).notNull(),
   challengeData: text("challenge_data"),
@@ -210,7 +213,7 @@ export const dailyChallenges = pgTable("daily_challenges", {
 // =============================================
 export const comboState = pgTable("combo_state", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().default(1),
+  userId: integer("user_id").notNull().references(() => users.id),
   comboDate: date("combo_date").notNull(),
   currentCombo: integer("current_combo").notNull().default(0),
   maxComboToday: integer("max_combo_today").notNull().default(0),
@@ -224,7 +227,7 @@ export const comboState = pgTable("combo_state", {
 // =============================================
 export const abstractGoals = pgTable("abstract_goals", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().default(1),
+  userId: integer("user_id").notNull().references(() => users.id),
   nazwa: varchar("nazwa", { length: 255 }).notNull(),
   opis: text("opis"),
   xpReward: integer("xp_reward").notNull().default(100),

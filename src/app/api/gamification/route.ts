@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, gamificationStats, streaks, xpLog, achievements, dailyChallenges, comboState } from "@/db";
 import { eq, desc, and, sql } from "drizzle-orm";
-
-const USER_ID = 1; // Dla aplikacji single-user
+import { auth } from "@/lib/auth";
 
 // Konfiguracja poziomów
 const LEVEL_CONFIG = {
@@ -38,17 +37,23 @@ function getLevelFromXP(totalXP: number): { level: number; currentLevelXP: numbe
 // GET - pobierz statystyki gamifikacji
 export async function GET(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const userId = parseInt(session.user.id);
+
     const searchParams = request.nextUrl.searchParams;
     const type = searchParams.get("type");
 
     // Pobierz lub utwórz statystyki
     let stats = await db.select().from(gamificationStats)
-      .where(eq(gamificationStats.userId, USER_ID))
+      .where(eq(gamificationStats.userId, userId))
       .limit(1);
 
     if (stats.length === 0) {
       const newStats = await db.insert(gamificationStats).values({
-        userId: USER_ID,
+        userId,
         totalXp: 0,
         currentLevel: 1,
         prestige: 0,
@@ -63,26 +68,26 @@ export async function GET(request: NextRequest) {
     if (type === "full") {
       // Pobierz wszystkie dane
       const playerStreaks = await db.select().from(streaks)
-        .where(eq(streaks.userId, USER_ID));
+        .where(eq(streaks.userId, userId));
 
       const playerAchievements = await db.select().from(achievements)
-        .where(eq(achievements.userId, USER_ID));
+        .where(eq(achievements.userId, userId));
 
       const today = new Date().toISOString().split("T")[0];
       const todayChallenges = await db.select().from(dailyChallenges)
         .where(and(
-          eq(dailyChallenges.userId, USER_ID),
+          eq(dailyChallenges.userId, userId),
           eq(dailyChallenges.challengeDate, today)
         ));
 
       const todayCombo = await db.select().from(comboState)
         .where(and(
-          eq(comboState.userId, USER_ID),
+          eq(comboState.userId, userId),
           eq(comboState.comboDate, today)
         ));
 
       const recentXP = await db.select().from(xpLog)
-        .where(eq(xpLog.userId, USER_ID))
+        .where(eq(xpLog.userId, userId))
         .orderBy(desc(xpLog.earnedAt))
         .limit(20);
 
@@ -112,6 +117,12 @@ export async function GET(request: NextRequest) {
 // POST - dodaj XP
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const userId = parseInt(session.user.id);
+
     const body = await request.json();
     const { xp_amount, xp_type, description, multiplier = 1, reference_id, reference_type, condition_text } = body;
 
@@ -123,7 +134,7 @@ export async function POST(request: NextRequest) {
 
     // Zapisz log XP
     await db.insert(xpLog).values({
-      userId: USER_ID,
+      userId,
       xpAmount: finalXP,
       xpType: xp_type,
       multiplier: String(multiplier),
@@ -139,13 +150,13 @@ export async function POST(request: NextRequest) {
         totalXp: sql`${gamificationStats.totalXp} + ${finalXP}`,
         updatedAt: new Date(),
       })
-      .where(eq(gamificationStats.userId, USER_ID))
+      .where(eq(gamificationStats.userId, userId))
       .returning();
 
     if (updated.length === 0) {
       // Utwórz nowe statystyki jeśli nie istnieją
       await db.insert(gamificationStats).values({
-        userId: USER_ID,
+        userId,
         totalXp: finalXP,
         currentLevel: 1,
       });
@@ -153,7 +164,7 @@ export async function POST(request: NextRequest) {
 
     // Sprawdź czy nastąpił level up
     const stats = await db.select().from(gamificationStats)
-      .where(eq(gamificationStats.userId, USER_ID))
+      .where(eq(gamificationStats.userId, userId))
       .limit(1);
 
     const levelInfo = getLevelFromXP(stats[0].totalXp);
@@ -161,7 +172,7 @@ export async function POST(request: NextRequest) {
     if (levelInfo.level > stats[0].currentLevel) {
       await db.update(gamificationStats)
         .set({ currentLevel: levelInfo.level })
-        .where(eq(gamificationStats.userId, USER_ID));
+        .where(eq(gamificationStats.userId, userId));
     }
 
     return NextResponse.json({

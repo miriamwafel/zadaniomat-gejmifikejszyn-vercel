@@ -1,22 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, roki, celeRok } from "@/db";
 import { eq, and, lte, gte, desc } from "drizzle-orm";
+import { auth } from "@/lib/auth";
 
 // GET - pobierz roki
 export async function GET(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const userId = parseInt(session.user.id);
+
     const searchParams = request.nextUrl.searchParams;
     const current = searchParams.get("current");
 
     if (current === "true") {
       const today = new Date().toISOString().split("T")[0];
       const result = await db.select().from(roki)
-        .where(and(lte(roki.dataStart, today), gte(roki.dataKoniec, today)))
+        .where(and(
+          eq(roki.userId, userId),
+          lte(roki.dataStart, today),
+          gte(roki.dataKoniec, today)
+        ))
         .limit(1);
       return NextResponse.json(result[0] || null);
     }
 
-    const result = await db.select().from(roki).orderBy(desc(roki.dataStart));
+    const result = await db.select().from(roki)
+      .where(eq(roki.userId, userId))
+      .orderBy(desc(roki.dataStart));
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error fetching roki:", error);
@@ -27,9 +40,16 @@ export async function GET(request: NextRequest) {
 // POST - utwórz nowy rok
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const userId = parseInt(session.user.id);
+
     const body = await request.json();
 
     const result = await db.insert(roki).values({
+      userId,
       nazwa: body.nazwa,
       dataStart: body.data_start,
       dataKoniec: body.data_koniec,
@@ -57,6 +77,12 @@ export async function POST(request: NextRequest) {
 // PUT - zaktualizuj rok
 export async function PUT(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const userId = parseInt(session.user.id);
+
     const body = await request.json();
 
     if (!body.id) {
@@ -70,8 +96,12 @@ export async function PUT(request: NextRequest) {
 
     const result = await db.update(roki)
       .set(updateData)
-      .where(eq(roki.id, body.id))
+      .where(and(eq(roki.id, body.id), eq(roki.userId, userId)))
       .returning();
+
+    if (result.length === 0) {
+      return NextResponse.json({ error: "Not found or unauthorized" }, { status: 404 });
+    }
 
     return NextResponse.json(result[0]);
   } catch (error) {
@@ -83,6 +113,12 @@ export async function PUT(request: NextRequest) {
 // DELETE - usuń rok
 export async function DELETE(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const userId = parseInt(session.user.id);
+
     const searchParams = request.nextUrl.searchParams;
     const id = searchParams.get("id");
 
@@ -90,7 +126,13 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "ID is required" }, { status: 400 });
     }
 
-    await db.delete(roki).where(eq(roki.id, parseInt(id)));
+    const result = await db.delete(roki)
+      .where(and(eq(roki.id, parseInt(id)), eq(roki.userId, userId)))
+      .returning();
+
+    if (result.length === 0) {
+      return NextResponse.json({ error: "Not found or unauthorized" }, { status: 404 });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

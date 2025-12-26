@@ -23,6 +23,7 @@ export async function POST() {
     await sql`
       CREATE TABLE IF NOT EXISTS roki (
         id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         nazwa VARCHAR(100) NOT NULL,
         data_start DATE NOT NULL,
         data_koniec DATE NOT NULL,
@@ -70,6 +71,7 @@ export async function POST() {
     await sql`
       CREATE TABLE IF NOT EXISTS zadania (
         id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         okres_id INTEGER REFERENCES okresy(id) ON DELETE SET NULL,
         kategoria VARCHAR(50) NOT NULL,
         dzien DATE NOT NULL,
@@ -90,6 +92,7 @@ export async function POST() {
     await sql`
       CREATE TABLE IF NOT EXISTS stale_zadania (
         id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         nazwa VARCHAR(255) NOT NULL,
         kategoria VARCHAR(50) NOT NULL,
         cel_todo TEXT,
@@ -119,20 +122,21 @@ export async function POST() {
     await sql`
       CREATE TABLE IF NOT EXISTS gamification_stats (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL DEFAULT 1,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         total_xp INTEGER NOT NULL DEFAULT 0,
         current_level INTEGER NOT NULL DEFAULT 1,
         prestige INTEGER NOT NULL DEFAULT 0,
         freeze_days_available INTEGER NOT NULL DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id)
       )
     `;
 
     await sql`
       CREATE TABLE IF NOT EXISTS streaks (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL DEFAULT 1,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         streak_type VARCHAR(50) NOT NULL,
         current_count INTEGER NOT NULL DEFAULT 0,
         best_count INTEGER NOT NULL DEFAULT 0,
@@ -147,7 +151,7 @@ export async function POST() {
     await sql`
       CREATE TABLE IF NOT EXISTS xp_log (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL DEFAULT 1,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         xp_amount INTEGER NOT NULL,
         xp_type VARCHAR(50) NOT NULL,
         multiplier DECIMAL(4,2) NOT NULL DEFAULT 1.00,
@@ -162,7 +166,7 @@ export async function POST() {
     await sql`
       CREATE TABLE IF NOT EXISTS achievements (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL DEFAULT 1,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         achievement_key VARCHAR(50) NOT NULL,
         earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         notified BOOLEAN NOT NULL DEFAULT false,
@@ -173,7 +177,7 @@ export async function POST() {
     await sql`
       CREATE TABLE IF NOT EXISTS daily_challenges (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL DEFAULT 1,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         challenge_date DATE NOT NULL,
         challenge_key VARCHAR(50) NOT NULL,
         challenge_data TEXT,
@@ -187,7 +191,7 @@ export async function POST() {
     await sql`
       CREATE TABLE IF NOT EXISTS combo_state (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL DEFAULT 1,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         combo_date DATE NOT NULL,
         current_combo INTEGER NOT NULL DEFAULT 0,
         max_combo_today INTEGER NOT NULL DEFAULT 0,
@@ -199,7 +203,7 @@ export async function POST() {
     await sql`
       CREATE TABLE IF NOT EXISTS abstract_goals (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL DEFAULT 1,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         nazwa VARCHAR(255) NOT NULL,
         opis TEXT,
         xp_reward INTEGER NOT NULL DEFAULT 100,
@@ -254,13 +258,6 @@ export async function POST() {
         ('obsluga_telefoniczna', 'Obsługa telefoniczna', 'wszystkie'),
         ('sprawy_organizacyjne', 'Sprawy Organizacyjne', 'zadania')
       ON CONFLICT (klucz) DO NOTHING
-    `;
-
-    // Utwórz początkowe statystyki gamifikacji
-    await sql`
-      INSERT INTO gamification_stats (user_id, total_xp, current_level, prestige, freeze_days_available)
-      VALUES (1, 0, 1, 0, 0)
-      ON CONFLICT DO NOTHING
     `;
 
     return NextResponse.json({
