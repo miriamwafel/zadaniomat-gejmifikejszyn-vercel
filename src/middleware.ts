@@ -7,7 +7,7 @@ export default auth((req) => {
   const isAdmin = req.auth?.user?.role === "admin" || req.auth?.user?.role === "super_admin";
 
   // Ścieżki publiczne
-  const publicPaths = ["/login", "/register", "/api/auth", "/api/init-db"];
+  const publicPaths = ["/login", "/register", "/setup", "/api/auth", "/api/init-db"];
   const isPublicPath = publicPaths.some(path => nextUrl.pathname.startsWith(path));
 
   // Ścieżki adminowe
